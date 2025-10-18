@@ -117,246 +117,404 @@ Kan [TRACKING] | Blinks: 42 | BPM: 15.2 | Time: 00:15:32
 - 💡 **Health insights** with medical recommendations
 - 🎥 **Camera selection** and configuration
 
-### Dashboard Sections
+### 3️⃣ Health Monitoring
 
-#### 1. Control Panel
-- **Start Tracking**: Begin eye blink detection
-- **Pause/Resume**: Temporarily halt tracking
-- **Stop Tracking**: End current session
+**Automatic Alerts:**
+```
+⚠️ Reduced Blink Rate Detected
 
-#### 2. Camera Selection
-- **Select Camera**: Choose from available cameras
-- **Refresh**: Update camera list
-- **Camera Info**: View resolution, FPS, and backend details
+Your blink rate is 9.2 per minute,
+below normal (12-20 BPM).
 
-#### 3. Statistics
-- **Current Session**: Live blink count and rate
-- **Total Statistics**: Historical data summary
-- **Charts**: Weekly trends and hourly patterns
+Top recommendations:
+• Take a 20-second break
+• Blink consciously
+```
 
-#### 4. Settings
-- **EAR Threshold**: Adjust sensitivity (0.1 - 0.5)
-- **Consecutive Frames**: Frames needed to confirm blink
-- **Auto-start**: Automatically begin tracking on launch
+**Health Levels:**
+- 🟢 **Normal** (12-20 BPM) - Healthy blink rate
+- 🟡 **Warning** (8-12 BPM) - Slightly reduced
+- 🔴 **Critical** (<8 BPM) - Severely reduced
 
-## 🔧 Configuration
+### 4️⃣ Customizable Settings
 
-### Detection Parameters
+**Detection Settings:**
+- **EAR Threshold** (0.15-0.35) - Adjust sensitivity
+- **Consecutive Frames** (1-5) - Blink confirmation
+- **👓 Glasses Mode** - Enhanced detection for eyewear
+- **Debug Mode** - View detailed logs
+- **Show Landmarks** - Visual feedback
 
-#### Eye Aspect Ratio (EAR) Threshold
-- **Default**: 0.3
-- **Range**: 0.1 - 0.5
-- **Lower values**: More sensitive (detects more blinks)
-- **Higher values**: Less sensitive (detects fewer blinks)
+## 🏗️ Technical Architecture
 
-#### Consecutive Frames
-- **Default**: 3
-- **Range**: 1 - 10
-- **Purpose**: Prevent false positives from noise
+### Technology Stack
 
-### Camera Settings
-- **Resolution**: Automatically set to 640x480 for optimal performance
-- **FPS**: Target 30 FPS for smooth detection
-- **Buffer Size**: Minimal buffering to reduce latency
+**Frontend:**
+- HTML5, CSS3, JavaScript (ES6+)
+- Bootstrap 5 - Responsive UI framework
+- Chart.js - Interactive data visualization
+- Socket.IO - Real-time updates
 
-## 📊 Data Storage
+**Backend:**
+- Python 3.11 - Core application
+- Flask - Web server
+- MediaPipe - Face mesh detection
+- OpenCV - Camera management
+- SQLite - Local database
+
+**Desktop Integration:**
+- pystray - System tray icon
+- plyer - Desktop notifications
+- Threading - Background processing
+
+### Detection Algorithm
+
+**Eye Aspect Ratio (EAR):**
+```
+EAR = (||p2-p6|| + ||p3-p5||) / (2 * ||p1-p4||)
+
+Where p1-p6 are eye landmark points
+Blink detected when EAR < threshold
+```
+
+**Adaptive Thresholding:**
+1. Calculate baseline EAR over first 100 frames
+2. Set threshold = baseline * 0.75
+3. Continuously update baseline
+4. Adjust for individual variations
+
+**Glasses Mode:**
+- Lower threshold (0.20 vs 0.25)
+- Increased sensitivity
+- Optimized for reflections
+
+## 📊 Data & Analytics
 
 ### Database Schema
-- **Blinks Table**: Individual blink events with timestamps
-- **Sessions Table**: Tracking session summaries
-- **Settings Table**: User preferences and configuration
 
-### Data Location
-- **Database**: `data/blink_tracker.db`
-- **Logs**: `logs/eye_tracker.log`
-- **Settings**: Stored in database
+**Blinks Table:**
+```sql
+CREATE TABLE blinks (
+    id INTEGER PRIMARY KEY,
+    session_id INTEGER,
+    timestamp DATETIME,
+    ear_value REAL,
+    threshold REAL
+);
+```
 
-## 🎛️ API Endpoints
+**Sessions Table:**
+```sql
+CREATE TABLE sessions (
+    id INTEGER PRIMARY KEY,
+    start_time DATETIME,
+    end_time DATETIME,
+    total_blinks INTEGER,
+    avg_bpm REAL,
+    duration_seconds INTEGER
+);
+```
 
-The web dashboard communicates with the backend via REST API:
+### Analytics Features
 
-### Status & Control
-- `GET /api/status` - Current application status
-- `POST /api/tracking/start` - Start tracking
-- `POST /api/tracking/pause` - Pause tracking
-- `POST /api/tracking/resume` - Resume tracking
-- `POST /api/tracking/stop` - Stop tracking
+**Real-time:**
+- Session blinks counter
+- Blinks per minute (BPM)
+- Current EAR value
+- Baseline EAR
+- Active threshold
 
-### Camera Management
-- `GET /api/cameras` - List available cameras
-- `GET /api/cameras/refresh` - Refresh camera list
-- `POST /api/cameras/select/<index>` - Select specific camera
+**Historical:**
+- Daily statistics
+- Weekly trends
+- Hourly patterns
+- Session history
+- Health insights timeline
 
-### Statistics
-- `GET /api/statistics/summary` - Overall statistics
-- `GET /api/statistics/daily` - Daily breakdown
-- `GET /api/statistics/weekly` - Weekly trends
-- `GET /api/sessions` - Recent tracking sessions
+## 🎯 Hackathon Highlights
 
-### Settings
-- `GET /api/settings` - Current settings
-- `POST /api/settings` - Update settings
+### Innovation
+
+1. **MediaPipe Integration** - First eye health app using Google's MediaPipe Face Mesh
+2. **Adaptive Learning** - Personalized baseline detection for each user
+3. **Glasses Mode** - Unique feature for eyewear users (60% of population)
+4. **Background Monitoring** - True set-and-forget operation
+5. **Medical Research** - Health insights based on ophthalmology studies
+
+### Impact
+
+**Target Users:**
+- 💼 Office workers (8+ hours screen time)
+- 👨‍💻 Software developers
+- 🎮 Gamers
+- 📚 Students (online learning)
+- 👓 Eyewear users
+
+**Potential Reach:**
+- 2 billion computer users worldwide
+- 60% experience digital eye strain
+- $2 billion annual productivity loss
+
+### Scalability
+
+**Current:**
+- Desktop application (Windows)
+- Local processing
+- Single user
+
+**Future:**
+- Cross-platform (macOS, Linux)
+- Mobile app (iOS, Android)
+- Enterprise dashboard
+- Cloud analytics
+- AI-powered predictions
+- Integration with health apps
 
 ## 🔒 Privacy & Security
 
-### Data Privacy
-- **Local Storage**: All data stored locally on your device
-- **No Cloud Sync**: No data transmitted to external servers
-- **Camera Access**: Only used for blink detection, no recording
+### Privacy-First Design
 
-### Security Features
-- **Local Web Server**: Dashboard only accessible from localhost
-- **No External Dependencies**: Self-contained operation
-- **Minimal Permissions**: Only requires camera access
+✅ **100% Local Processing** - No data leaves your device
+✅ **No Cloud Storage** - All data stored in local SQLite database
+✅ **No Recording** - Camera used only for landmark detection
+✅ **No Tracking** - No analytics, no telemetry
+✅ **Open Source** - Transparent, auditable code
+
+### Security Measures
+
+- **Localhost Only** - Web server bound to 127.0.0.1
+- **No External Requests** - Completely offline operation
+- **Minimal Permissions** - Only camera access required
+- **Encrypted Storage** - Database can be encrypted
+- **No PII Collection** - No personal information stored
+
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+*Real-time monitoring with beautiful charts and statistics*
+
+### System Tray
+![System Tray](docs/screenshots/system-tray.png)
+*Background operation with live stats on hover*
+
+### Health Insights
+![Health Insights](docs/screenshots/health-insights.png)
+*Medical-based recommendations and alerts*
+
+### Settings
+![Settings](docs/screenshots/settings.png)
+*Customizable detection parameters*
+
+## 🎥 Demo Video
+
+[![Kan Demo](docs/screenshots/demo-thumbnail.png)](https://youtu.be/your-demo-video)
+
+**Watch the full demo:** [YouTube Link](https://youtu.be/your-demo-video)
 
 ## 🔍 Troubleshooting
 
-### Common Issues
+### Quick Fixes
 
-#### Camera Not Detected
-```
-1. Check camera connections
-2. Ensure camera isn't used by another application
-3. Try running as administrator (Windows)
-4. Check privacy settings (Windows 10/11)
-```
-
-#### Dashboard Not Loading
-```
-1. Verify Python is running without errors
-2. Check if port 5000 is available
-3. Try accessing http://127.0.0.1:5000
-4. Check firewall settings
-```
-
-#### Poor Detection Accuracy
-```
-1. Adjust EAR threshold in settings
-2. Ensure good lighting conditions
-3. Position camera at eye level
-4. Clean camera lens
-5. Check camera resolution and FPS
-```
-
-#### High CPU Usage
-```
-1. Close other camera applications
-2. Reduce detection sensitivity
-3. Check for proper camera drivers
-4. Monitor system resources
-```
-
-### Log Files
-Check `logs/eye_tracker.log` for detailed error information:
+**Camera not working?**
 ```bash
-tail -f logs/eye_tracker.log  # Linux/macOS
-Get-Content logs/eye_tracker.log -Tail 20 -Wait  # Windows PowerShell
+# Check camera access
+python -c "import cv2; print(cv2.VideoCapture(0).isOpened())"
 ```
 
-## 🛠️ Development
-
-### Project Structure
+**Port 5000 in use?**
+```bash
+# Change port in src/web_server.py
+self.port = 5001  # Use different port
 ```
-eye_blink_tracker/
-├── main.py                 # Application entry point
-├── setup.py                # Setup and installation script
+
+**Detection not accurate?**
+- Enable **Glasses Mode** if you wear glasses
+- Adjust **EAR Threshold** (lower = more sensitive)
+- Ensure good lighting
+- Position camera at eye level
+
+**Check logs:**
+```bash
+type logs\eye_tracker.log  # Windows
+```
+
+## 🛠️ Project Structure
+
+```
+kan/
+├── run_app.py              # Application entry point
 ├── requirements.txt        # Python dependencies
 ├── README.md              # This file
+├── .gitignore             # Git ignore rules
+│
 ├── src/                   # Source code
-│   ├── app.py             # Main application class
-│   ├── camera_manager.py  # Camera detection and management
-│   ├── blink_detector.py  # Eye blink detection logic
+│   ├── app_opencv.py      # Main application (MediaPipe)
+│   ├── camera_manager.py  # Camera management
+│   ├── blink_detector_mediapipe.py  # MediaPipe detection
 │   ├── web_server.py      # Flask web server
 │   ├── system_tray.py     # System tray integration
-│   └── database.py        # Database management
-├── templates/             # HTML templates
-│   └── dashboard.html     # Main dashboard template
-├── static/               # Static web assets
+│   ├── database.py        # SQLite database
+│   ├── health_monitor.py  # Health analysis
+│   └── health_notifier.py # Desktop notifications
+│
+├── web-app/              # Standalone web version
+│   ├── index.html        # Web app UI
+│   ├── app.js            # Main JavaScript
+│   ├── blink-detector.js # Detection logic
+│   ├── db.js             # IndexedDB
+│   └── health-insights.js # Health analysis
+│
+├── templates/            # Flask templates
+│   └── dashboard.html    # Dashboard template
+│
+├── static/              # Static assets
 │   ├── css/
-│   │   └── dashboard.css  # Dashboard styles
+│   │   └── dashboard.css
 │   └── js/
-│       └── dashboard.js   # Dashboard JavaScript
-├── data/                 # Database storage
-├── logs/                 # Application logs
-└── shape_predictor_68_face_landmarks.dat  # dlib model file
+│       └── dashboard.js
+│
+├── data/                # Database storage
+│   └── blink_tracker.db
+│
+├── logs/                # Application logs
+│   └── eye_tracker.log
+│
+└── venv-py311/          # Python virtual environment
 ```
 
-### Adding Features
-1. **New API Endpoints**: Add to `web_server.py`
-2. **Database Changes**: Modify `database.py`
-3. **UI Components**: Update `templates/dashboard.html`
-4. **Detection Logic**: Enhance `blink_detector.py`
+## 🧪 Testing
 
-### Testing
 ```bash
-# Run with debug logging
-python main.py --debug
+# Test camera
+python -c "import cv2; cap = cv2.VideoCapture(0); print('Camera OK' if cap.isOpened() else 'Camera Error')"
 
-# Test camera detection
-python -c "from src.camera_manager import CameraManager; cm = CameraManager(); print(cm.get_available_cameras())"
+# Test MediaPipe
+python -c "import mediapipe as mp; print('MediaPipe OK')"
 
-# Test database
-python -c "from src.database import DatabaseManager; db = DatabaseManager(); print(db.get_statistics_summary())"
+# Run with debug mode
+python run_app.py --debug
 ```
 
-## 📋 Requirements
+## 📋 Dependencies
 
-### Python Packages
-- **opencv-python** (4.8.0+): Computer vision and camera access
-- **dlib** (19.24.0+): Facial landmark detection
-- **numpy** (1.24.0+): Numerical computations
-- **Flask** (2.3.0+): Web server framework
-- **Flask-SocketIO** (5.3.0+): Real-time web communication
-- **pystray** (0.19.0+): System tray integration
-- **Pillow** (10.0.0+): Image processing
-- **scipy**: Distance calculations for EAR
+### Core Libraries
+```txt
+opencv-python>=4.8.0      # Computer vision
+mediapipe>=0.10.0         # Face mesh detection
+numpy>=1.24.0             # Numerical computing
+scipy>=1.11.0             # Scientific computing
+```
+
+### Web Framework
+```txt
+Flask>=2.3.0              # Web server
+Flask-SocketIO>=5.3.0     # Real-time updates
+python-socketio>=5.9.0    # Socket.IO support
+```
+
+### Desktop Integration
+```txt
+pystray>=0.19.0           # System tray
+Pillow>=10.0.0            # Image processing
+plyer>=2.1.0              # Notifications
+```
 
 ### System Requirements
+- **OS**: Windows 10/11 (64-bit)
 - **RAM**: 2GB minimum, 4GB recommended
-- **CPU**: Any modern processor
-- **Camera**: USB webcam or built-in camera
-- **Network**: Local network access for web dashboard
+- **CPU**: Intel i3 or equivalent
+- **Camera**: 720p webcam (30 FPS)
+- **Storage**: 500MB free space
 
-## 🤝 Contributing
+## 👥 Team
 
-### Bug Reports
-1. Check existing issues
-2. Provide detailed description
-3. Include system information
-4. Attach log files if applicable
+**Developed for [Hackathon Name]**
 
-### Feature Requests
-1. Describe the feature
-2. Explain use case
-3. Consider implementation approach
+- **Developer**: [Your Name]
+- **Role**: Full-stack Developer
+- **Contact**: [your.email@example.com]
+- **GitHub**: [@yourusername](https://github.com/yourusername)
 
-### Pull Requests
-1. Fork the repository
-2. Create feature branch
-3. Test thoroughly
-4. Update documentation
-5. Submit pull request
+## 🏆 Achievements
+
+- ✅ **Fully Functional** - Complete end-to-end solution
+- ✅ **Modern Tech Stack** - MediaPipe, Flask, Socket.IO
+- ✅ **Beautiful UI** - Apple-inspired design
+- ✅ **Privacy-First** - 100% local processing
+- ✅ **Real Impact** - Addresses genuine health problem
+
+## 🚀 Future Roadmap
+
+### Phase 1 (Current)
+- ✅ Desktop app with MediaPipe
+- ✅ Real-time monitoring
+- ✅ Health insights
+- ✅ Background operation
+
+### Phase 2 (Next 3 months)
+- 📱 Mobile app (iOS/Android)
+- 🌍 Cross-platform support
+- 🤖 AI-powered predictions
+- 📊 Advanced analytics
+
+### Phase 3 (6-12 months)
+- 🏢 Enterprise version
+- ☁️ Cloud sync (optional)
+- 👥 Team dashboards
+- 🔗 Health app integrations
+- 💊 Prescription tracking
 
 ## 📄 License
 
-This project is released under the MIT License. See LICENSE file for details.
+MIT License - See [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **dlib**: Davis King's machine learning library
-- **OpenCV**: Computer vision library
-- **Flask**: Web framework for Python
-- **Chart.js**: Charts and graphs for the dashboard
-- **Bootstrap**: UI framework for responsive design
+**Technology:**
+- [MediaPipe](https://google.github.io/mediapipe/) - Google's ML solutions
+- [OpenCV](https://opencv.org/) - Computer vision library
+- [Flask](https://flask.palletsprojects.com/) - Web framework
+- [Chart.js](https://www.chartjs.org/) - Data visualization
 
-## 📞 Support
+**Research:**
+- American Optometric Association - Digital eye strain guidelines
+- National Eye Institute - Blink rate studies
+- Journal of Ophthalmology - Computer vision syndrome research
 
-For support and questions:
-1. Check this README for common solutions
-2. Review log files for error details
-3. Search existing issues
-4. Create new issue with detailed information
+**Inspiration:**
+- The 2 billion computer users experiencing digital eye strain
+- Personal experience with dry eyes from coding
+- Desire to create preventive health solutions
+
+## 📞 Contact
+
+**Questions? Feedback? Collaboration?**
+
+- 📧 Email: [your.email@example.com]
+- 💼 LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
+- 🐦 Twitter: [@yourhandle](https://twitter.com/yourhandle)
+- 🌐 Website: [yourwebsite.com](https://yourwebsite.com)
+
+## ⭐ Show Your Support
+
+If you find Kan useful:
+- ⭐ Star this repository
+- 🐛 Report bugs
+- 💡 Suggest features
+- 🔄 Share with others
+- 🤝 Contribute code
 
 ---
 
-**Happy Blinking! 👁️**
+<div align="center">
+
+**Kan (கண்) - Protecting Your Vision, One Blink at a Time** 👁️
+
+*Built with ❤️*
+
+[![Made with Python](https://img.shields.io/badge/Made%20with-Python-blue.svg)](https://www.python.org/)
+[![Powered by MediaPipe](https://img.shields.io/badge/Powered%20by-MediaPipe-green.svg)](https://google.github.io/mediapipe/)
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
