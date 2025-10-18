@@ -20,12 +20,19 @@ In today's digital world, people spend 8-12 hours daily staring at screens, lead
 
 ## 💡 Our Solution
 
-**Kan** is a non-intrusive desktop application that:
+**Kan** is a non-intrusive desktop and web application that:
 1. ✅ **Monitors** your blink rate continuously in the background
 2. ✅ **Analyzes** your eye health patterns using medical research
 3. ✅ **Alerts** you when issues are detected
 4. ✅ **Guides** you with personalized recommendations
 5. ✅ **Tracks** your progress over time with detailed analytics
+
+## 📷 Screenshots 
+
+![System Tray](images/00-SystemTray.png)
+![Tracker](images/01-Tracker.png)
+![Settings](images/02-Settings.png)
+![EyeTips](images/03-EyeTips.png)
 
 ## ✨ Key Features
 
@@ -51,9 +58,8 @@ In today's digital world, people spend 8-12 hours daily staring at screens, lead
 - **Session History** - Track your progress over time
 
 ### 🎨 Beautiful UI
-- **Apple-inspired Design** - Modern, clean interface
+- **Intuitive Design** - Modern, clean interface
 - **Responsive Layout** - Works on any screen size
-- **Dark/Light Mode** - Easy on the eyes
 - **Smooth Animations** - Polished user experience
 
 ## 🚀 Quick Start
@@ -61,19 +67,19 @@ In today's digital world, people spend 8-12 hours daily staring at screens, lead
 ### Prerequisites
 - **Python 3.11+** (recommended)
 - **Webcam** (built-in or external)
-- **Windows 10/11** (macOS/Linux support coming soon)
+- **Windows 10/11**
 - **2GB RAM** minimum
 
 ### One-Command Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/kan-eye-health.git
-cd kan-eye-health
+git clone https://github.com/QAInsights/kan.git
+cd kan
 
 # Create virtual environment
-python -m venv venv-py311
-venv-py311\Scripts\activate  # Windows
+python -m venv venv
+venv\Scripts\activate  # Windows
 
 # Install dependencies
 pip install -r requirements.txt
