@@ -5,6 +5,7 @@
 // Global variables
 let db;
 let blinkDetector;
+let healthInsights;
 let faceMesh;
 let camera;
 let isTracking = false;
@@ -19,6 +20,10 @@ let showLandmarks = false;
 let weeklyChart;
 let hourlyChart;
 
+// Health monitoring
+let lastHealthCheck = 0;
+let healthCheckInterval = 30000; // Check every 30 seconds
+
 /**
  * Initialize the application
  */
@@ -32,6 +37,12 @@ async function initApp() {
         // Initialize blink detector
         blinkDetector = new BlinkDetector(onBlinkDetected);
         console.log('Blink detector initialized');
+
+        // Initialize health insights
+        healthInsights = new HealthInsights();
+        console.log('Health insights initialized');
+        loadHealthTips();
+        loadDisclaimer();
 
         // Load settings
         await loadSettings();
@@ -358,13 +369,29 @@ function updateStatusBadge(status) {
 }
 
 /**
- * Update session statistics
+ * Update session statistics display
  */
 function updateSessionStats() {
     const stats = blinkDetector.getStats();
     
     document.getElementById('sessionBlinks').textContent = stats.totalBlinks;
     document.getElementById('blinksPerMinute').textContent = stats.blinksPerMinute;
+
+    // Update blink rate badge
+    const interpretation = healthInsights.getBlinkRateInterpretation(stats.blinksPerMinute);
+    const badge = document.getElementById('blinkRateBadge');
+    if (badge) {
+        badge.textContent = interpretation.category;
+        badge.style.backgroundColor = interpretation.color;
+        badge.style.color = '#fff';
+    }
+
+    // Check health insights periodically
+    const now = Date.now();
+    if (now - lastHealthCheck > healthCheckInterval && isTracking && !isPaused) {
+        checkHealthInsights(stats);
+        lastHealthCheck = now;
+    }
 }
 
 /**
@@ -645,6 +672,136 @@ async function exportData() {
         console.error('Failed to export data:', error);
         alert('Failed to export data');
     }
+}
+
+/**
+ * Check health insights and show alerts
+ */
+function checkHealthInsights(stats) {
+    const insights = healthInsights.analyzeBlinkPattern(stats);
+    
+    // Only show alerts for warnings and above
+    if (insights.severity >= 2 && healthInsights.shouldShowAlert(insights.status)) {
+        showHealthAlert(insights);
+    }
+}
+
+/**
+ * Show health alert
+ */
+function showHealthAlert(insights) {
+    const alert = document.getElementById('healthAlert');
+    const icon = document.getElementById('healthIcon');
+    const title = document.getElementById('healthTitle');
+    const message = document.getElementById('healthMessage');
+    const recommendations = document.getElementById('healthRecommendations');
+    const medicalNote = document.getElementById('healthMedicalNote');
+    
+    // Set content
+    icon.textContent = insights.icon;
+    title.textContent = insights.title;
+    message.textContent = insights.message;
+    
+    // Set recommendations
+    recommendations.innerHTML = '<strong>Recommendations:</strong><ul class="mt-2 mb-0">' +
+        insights.recommendations.map(rec => `<li>${rec}</li>`).join('') +
+        '</ul>';
+    
+    // Set medical note
+    medicalNote.innerHTML = '<strong>Medical Note:</strong> ' + insights.medicalNote;
+    
+    // Set alert style
+    alert.className = `alert alert-${insights.level} alert-dismissible fade show`;
+    alert.style.display = 'block';
+    
+    // Auto-dismiss after 30 seconds for info/warning
+    if (insights.severity < 3) {
+        setTimeout(() => {
+            alert.style.display = 'none';
+        }, 30000);
+    }
+}
+
+/**
+ * Load health tips
+ */
+function loadHealthTips() {
+    const tips = healthInsights.getGeneralTips();
+    const container = document.getElementById('healthTips');
+    
+    container.innerHTML = tips.tips.map(tip => `
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-primary">
+                        <i class="fas fa-check-circle me-2"></i>${tip.title}
+                    </h6>
+                    <p class="card-text small">${tip.description}</p>
+                    <p class="card-text">
+                        <small class="text-muted"><em>Source: ${tip.reference}</em></small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Load disclaimer content
+ */
+function loadDisclaimer() {
+    const disclaimer = healthInsights.getDisclaimer();
+    const content = document.getElementById('disclaimerContent');
+    content.innerHTML = disclaimer.content;
+}
+
+/**
+ * Show disclaimer modal
+ */
+function showDisclaimerModal() {
+    const modal = new bootstrap.Modal(document.getElementById('disclaimerModal'));
+    modal.show();
+}
+
+/**
+ * Show health info modal
+ */
+function showHealthInfoModal() {
+    const symptoms = healthInsights.getSymptomsGuide();
+    const content = document.getElementById('healthInfoContent');
+    
+    let html = `<h5>${symptoms.title}</h5>`;
+    
+    symptoms.conditions.forEach(condition => {
+        html += `
+            <div class="mb-4">
+                <h6 class="text-primary">${condition.name}</h6>
+                <p><strong>Symptoms:</strong></p>
+                <ul class="small">
+                    ${condition.symptoms.map(s => `<li>${s}</li>`).join('')}
+                </ul>
+                <p><strong>Self-Care:</strong></p>
+                <ul class="small">
+                    ${condition.selfCare.map(s => `<li>${s}</li>`).join('')}
+                </ul>
+                <p class="small text-muted"><strong>Seek Professional Help:</strong> ${condition.seekHelp}</p>
+            </div>
+        `;
+    });
+    
+    html += `
+        <div class="alert alert-danger">
+            <h6>${symptoms.emergency.title}</h6>
+            <ul class="mb-0">
+                ${symptoms.emergency.symptoms.map(s => `<li>${s}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+    
+    content.innerHTML = html;
+    
+    const modal = new bootstrap.Modal(document.getElementById('healthInfoModal'));
+    modal.show();
 }
 
 // Initialize app when DOM is ready
