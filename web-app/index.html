@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Blink Tracker - Pure Web App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            /* Apple-inspired color palette */
+            --primary-color: #007AFF;
+            --primary-dark: #0051D5;
+            --success-color: #34C759;
+            --warning-color: #FF9500;
+            --danger-color: #FF3B30;
+            --info-color: #5AC8FA;
+            --purple-color: #AF52DE;
+            
+            /* Neutral colors */
+            --bg-primary: #F5F5F7;
+            --bg-secondary: #FFFFFF;
+            --text-primary: #1D1D1F;
+            --text-secondary: #86868B;
+            --border-color: #D2D2D7;
+            
+            /* Shadows */
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .main-container {
+            padding: 2rem 0;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 18px 18px 0 0 !important;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 2rem 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.05) 0%, rgba(175, 82, 222, 0.05) 100%);
+        }
+
+        .stat-value {
+            font-size: 2.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0.01em;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: var(--shadow-md);
+        }
+
+        #videoElement {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #canvasElement {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1.25rem;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: inline-block;
+            letter-spacing: 0.01em;
+        }
+
+        .status-tracking {
+            background: var(--success-color);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .status-paused {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .status-stopped {
+            background: var(--text-secondary);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+
+        .btn-control {
+            padding: 0.875rem 1.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            border: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.01em;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #E68900;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #E6342A;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background: transparent;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: saturate(180%) blur(20px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-primary) !important;
+            letter-spacing: -0.02em;
+        }
+
+        .blink-indicator {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--success-color);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            box-shadow: 0 0 12px rgba(52, 199, 89, 0.6);
+        }
+
+        .blink-indicator.active {
+            opacity: 1;
+            animation: blink-flash 0.3s ease;
+        }
+
+        @keyframes blink-flash {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+        }
+
+        .session-item {
+            padding: 1.25rem;
+            border-left: 3px solid var(--primary-color);
+            margin-bottom: 1rem;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .session-item:hover {
+            background: rgba(0, 122, 255, 0.05);
+            border-left-color: var(--primary-dark);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+            padding: 1rem 0;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(29, 29, 31, 0.95);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .form-range {
+            height: 6px;
+        }
+
+        .form-range::-webkit-slider-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border: 3px solid white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-range::-webkit-slider-thumb:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .form-check-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 122, 255, 0.25);
+        }
+
+        .alert {
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .alert-info {
+            background: rgba(90, 200, 250, 0.1);
+            border-color: var(--info-color);
+            color: var(--text-primary);
+        }
+
+        .alert-warning {
+            background: rgba(255, 149, 0, 0.1);
+            border-color: var(--warning-color);
+            color: var(--text-primary);
+        }
+
+        .alert-danger {
+            background: rgba(255, 59, 48, 0.1);
+            border-color: var(--danger-color);
+            color: var(--text-primary);
+        }
+
+        .alert-success {
+            background: rgba(52, 199, 89, 0.1);
+            border-color: var(--success-color);
+            color: var(--text-primary);
+        }
+
+        .badge {
+            padding: 0.4rem 0.75rem;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 0.02em;
+        }
+
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .btn-close {
+            opacity: 0.5;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+        }
+
+        h5, h6 {
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .text-primary {
+            color: var(--primary-color) !important;
+        }
+
+        .text-success {
+            color: var(--success-color) !important;
+        }
+
+        .text-warning {
+            color: var(--warning-color) !important;
+        }
+
+        .text-danger {
+            color: var(--danger-color) !important;
+        }
+
+        .text-info {
+            color: var(--info-color) !important;
+        }
+
+        .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        .bg-primary {
+            background-color: var(--primary-color) !important;
+        }
+
+        .bg-success {
+            background-color: var(--success-color) !important;
+        }
+
+        .bg-warning {
+            background-color: var(--warning-color) !important;
+        }
+
+        .bg-danger {
+            background-color: var(--danger-color) !important;
+        }
+
+        small {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-3x mb-3"></i>
+            <h3>Initializing MediaPipe...</h3>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="fas fa-eye me-2"></i>Eye Blink Tracker
+            </span>
+            <div class="d-flex align-items-center">
+                <span id="statusBadge" class="status-badge status-stopped me-3">Stopped</span>
+                <button class="btn btn-outline-primary btn-sm" onclick="exportData()">
+                    <i class="fas fa-download me-1"></i>Export Data
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid main-container">
+        <div class="row">
+            <!-- Left Column - Controls & Video -->
+            <div class="col-lg-4">
+                <!-- Control Panel -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-gamepad me-2"></i>Control Panel</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button id="btnStart" class="btn btn-success btn-control" onclick="startTracking()">
+                                <i class="fas fa-play me-2"></i>Start Tracking
+                            </button>
+                            <button id="btnPause" class="btn btn-warning btn-control" onclick="pauseTracking()" disabled>
+                                <i class="fas fa-pause me-2"></i>Pause
+                            </button>
+                            <button id="btnResume" class="btn btn-info btn-control" onclick="resumeTracking()" disabled>
+                                <i class="fas fa-play me-2"></i>Resume
+                            </button>
+                            <button id="btnStop" class="btn btn-danger btn-control" onclick="stopTracking()" disabled>
+                                <i class="fas fa-stop me-2"></i>Stop Tracking
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Session Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Current Session</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 stat-card">
+                                <div class="stat-value text-primary" id="sessionBlinks">0</div>
+                                <div class="stat-label">Blinks</div>
+                            </div>
+                            <div class="col-6 stat-card">
+                                <div class="stat-value text-success" id="blinksPerMinute">0</div>
+                                <div class="stat-label">Per Minute</div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12 stat-card">
+                                <div class="stat-value text-info" id="sessionDuration">00:00:00</div>
+                                <div class="stat-label">Duration</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Feed -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-video me-2"></i>Camera Feed</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="video-container">
+                            <video id="videoElement" autoplay playsinline></video>
+                            <canvas id="canvasElement"></canvas>
+                            <div id="blinkIndicator" class="blink-indicator"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="earThreshold" class="form-label">
+                                EAR Threshold: <span id="earThresholdValue">0.25</span>
+                            </label>
+                            <input type="range" class="form-range" id="earThreshold" 
+                                   min="0.15" max="0.35" step="0.01" value="0.25"
+                                   oninput="updateThreshold(this.value)">
+                            <small class="text-muted">Fallback threshold (adaptive mode uses baseline)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="consecutiveFrames" class="form-label">
+                                Consecutive Frames: <span id="consecutiveFramesValue">1</span>
+                            </label>
+                            <input type="range" class="form-range" id="consecutiveFrames" 
+                                   min="1" max="5" step="1" value="1"
+                                   oninput="updateConsecutiveFrames(this.value)">
+                            <small class="text-muted">Frames to confirm blink (1 = fastest)</small>
+                        </div>
+                        <div class="mb-3">
+                            <div class="alert alert-info py-2 px-3 mb-2" style="font-size: 0.85rem;">
+                                <strong>Current EAR:</strong> <span id="currentEAR">0.000</span>
+                                <br><strong>Baseline:</strong> <span id="baselineEAR">0.000</span>
+                                <br><strong>Active Threshold:</strong> <span id="activeThreshold">0.000</span>
+                                <br><small class="text-muted">Adaptive detection enabled</small>
+                            </div>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="glassesMode" onchange="toggleGlassesMode()">
+                            <label class="form-check-label" for="glassesMode">
+                                <strong>👓 Glasses Mode</strong> (more sensitive)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="showLandmarks" onchange="toggleLandmarks()">
+                            <label class="form-check-label" for="showLandmarks">
+                                Show Eye Landmarks
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="debugMode" onchange="toggleDebugMode()">
+                            <label class="form-check-label" for="debugMode">
+                                Debug Mode (console logs)
+                            </label>
+                        </div>
+                        <div class="mt-3">
+                            <div class="alert alert-warning py-2 px-3" style="font-size: 0.8rem;">
+                                <strong><i class="fas fa-exclamation-triangle me-1"></i>Important:</strong>
+                                <br>Camera access stops when tab is inactive (browser security).
+                                <br>Tracking will automatically pause and resume when you switch tabs.
+                                <br><em>Keep this tab active for continuous detection.</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Statistics & Charts -->
+            <div class="col-lg-8">
+                <!-- Health Insights Alert -->
+                <div id="healthAlert" class="alert alert-dismissible fade show" role="alert" style="display: none;">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3" style="font-size: 2rem;" id="healthIcon">👁️</div>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-2" id="healthTitle">Health Insight</h5>
+                            <p class="mb-2" id="healthMessage"></p>
+                            <div id="healthRecommendations" class="small"></div>
+                            <hr>
+                            <p class="mb-0 small text-muted" id="healthMedicalNote"></p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-primary" id="totalBlinks">0</div>
+                            <div class="stat-label">Total Blinks</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-success" id="todayBlinks">0</div>
+                            <div class="stat-label">Today</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-info" id="avgPerDay">0</div>
+                            <div class="stat-label">Daily Avg</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-warning" id="avgBPM">0</div>
+                            <div class="stat-label">Avg BPM</div>
+                            <div class="mt-2">
+                                <span class="badge" id="blinkRateBadge" style="font-size: 0.7rem;">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weekly Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Weekly Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Hourly Distribution -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Hourly Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="hourlyChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sessions -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Sessions</h5>
+                            </div>
+                            <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                                <div id="recentSessions">
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>No sessions yet
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Health Tips Card -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Eye Health Tips</h5>
+                        <button class="btn btn-sm btn-outline-light" onclick="showDisclaimerModal()">
+                            <i class="fas fa-info-circle me-1"></i>Medical Disclaimer
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="healthTips" class="row"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medical Disclaimer Modal -->
+    <div class="modal fade" id="disclaimerModal" tabindex="-1" aria-labelledby="disclaimerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="disclaimerModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Medical Disclaimer
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="disclaimerContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">I Understand</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Info Modal -->
+    <div class="modal fade" id="healthInfoModal" tabindex="-1" aria-labelledby="healthInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="healthInfoModalLabel">
+                        <i class="fas fa-info-circle me-2"></i>Eye Health Information
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="healthInfoContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MediaPipe Face Mesh -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap JS (for modals) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="db.js"></script>
+    <script src="blink-detector.js"></script>
+    <script src="health-insights.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

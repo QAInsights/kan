@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Blink Tracker - System Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .test-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .test-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .test-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-pass {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-fail {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            margin: 20px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .error-box {
+            background: #ffe7e7;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .success-box {
+            background: #e7ffe7;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👁️ System Test</h1>
+        <p class="subtitle">Verify your browser supports all required features</p>
+
+        <div class="info-box">
+            <strong>ℹ️ About This Test</strong><br>
+            This page checks if your browser can run the Eye Blink Tracker.
+        </div>
+
+        <div id="tests">
+            <div class="test-item">
+                <span class="test-name">🌐 Browser Compatibility</span>
+                <span class="test-status status-pending" id="browserStatus">Testing...</span>
+            </div>
+            <div class="test-item">
+                <span class="test-name">📹 Camera Access</span>
+                <span class="test-status status-pending" id="cameraStatus">Not tested</span>
+            </div>
+            <div class="test-item">
+                <span class="test-name">🗄️ IndexedDB Support</span>
+                <span class="test-status status-pending" id="dbStatus">Testing...</span>
+            </div>
+            <div class="test-item">
+                <span class="test-name">🧮 WebAssembly Support</span>
+                <span class="test-status status-pending" id="wasmStatus">Testing...</span>
+            </div>
+            <div class="test-item">
+                <span class="test-name">🎨 Canvas Support</span>
+                <span class="test-status status-pending" id="canvasStatus">Testing...</span>
+            </div>
+            <div class="test-item">
+                <span class="test-name">📡 MediaPipe CDN</span>
+                <span class="test-status status-pending" id="cdnStatus">Testing...</span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="testCamera()">📹 Test Camera Access</button>
+        
+        <video id="testVideo" autoplay playsinline></video>
+
+        <div class="success-box" id="successBox">
+            <strong>✅ All Tests Passed!</strong><br>
+            Your browser is fully compatible. You can use the Eye Blink Tracker.
+        </div>
+
+        <div class="error-box" id="errorBox">
+            <strong>❌ Some Tests Failed</strong><br>
+            <span id="errorMessage"></span>
+        </div>
+
+        <button class="btn btn-success hidden" id="launchBtn" onclick="launch()">
+            🚀 Launch Eye Blink Tracker
+        </button>
+    </div>
+
+    <script>
+        let testResults = {
+            browser: false,
+            camera: false,
+            db: false,
+            wasm: false,
+            canvas: false,
+            cdn: false
+        };
+
+        // Test browser compatibility
+        function testBrowser() {
+            const userAgent = navigator.userAgent;
+            const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
+            const isFirefox = /Firefox/.test(userAgent);
+            const isSafari = /Safari/.test(userAgent) && /Apple Computer/.test(navigator.vendor);
+            const isEdge = /Edg/.test(userAgent);
+
+            const supported = isChrome || isFirefox || isSafari || isEdge;
+            updateStatus('browserStatus', supported, supported ? 'Compatible' : 'Unsupported');
+            testResults.browser = supported;
+            return supported;
+        }
+
+        // Test IndexedDB
+        function testIndexedDB() {
+            const supported = 'indexedDB' in window;
+            updateStatus('dbStatus', supported, supported ? 'Supported' : 'Not supported');
+            testResults.db = supported;
+            return supported;
+        }
+
+        // Test WebAssembly
+        function testWebAssembly() {
+            const supported = typeof WebAssembly === 'object';
+            updateStatus('wasmStatus', supported, supported ? 'Supported' : 'Not supported');
+            testResults.wasm = supported;
+            return supported;
+        }
+
+        // Test Canvas
+        function testCanvas() {
+            const canvas = document.createElement('canvas');
+            const supported = !!(canvas.getContext && canvas.getContext('2d'));
+            updateStatus('canvasStatus', supported, supported ? 'Supported' : 'Not supported');
+            testResults.canvas = supported;
+            return supported;
+        }
+
+        // Test MediaPipe CDN
+        async function testCDN() {
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js', {
+                    method: 'HEAD'
+                });
+                const supported = response.ok;
+                updateStatus('cdnStatus', supported, supported ? 'Accessible' : 'Not accessible');
+                testResults.cdn = supported;
+                return supported;
+            } catch (error) {
+                updateStatus('cdnStatus', false, 'Not accessible');
+                testResults.cdn = false;
+                return false;
+            }
+        }
+
+        // Test camera access
+        async function testCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('testVideo');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                
+                updateStatus('cameraStatus', true, 'Working');
+                testResults.camera = true;
+
+                // Stop after 3 seconds
+                setTimeout(() => {
+                    stream.getTracks().forEach(track => track.stop());
+                    video.style.display = 'none';
+                    checkAllTests();
+                }, 3000);
+            } catch (error) {
+                updateStatus('cameraStatus', false, 'Denied/Error');
+                testResults.camera = false;
+                document.getElementById('errorBox').style.display = 'block';
+                document.getElementById('errorMessage').textContent = 
+                    'Camera access denied. Please allow camera permissions and try again.';
+            }
+        }
+
+        // Update status display
+        function updateStatus(elementId, passed, text) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = 'test-status ' + (passed ? 'status-pass' : 'status-fail');
+        }
+
+        // Check all tests
+        function checkAllTests() {
+            const allPassed = Object.values(testResults).every(result => result === true);
+            
+            if (allPassed) {
+                document.getElementById('successBox').style.display = 'block';
+                document.getElementById('errorBox').style.display = 'none';
+                document.getElementById('launchBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('errorBox').style.display = 'block';
+                const failedTests = Object.keys(testResults)
+                    .filter(key => !testResults[key])
+                    .map(key => key.charAt(0).toUpperCase() + key.slice(1))
+                    .join(', ');
+                document.getElementById('errorMessage').textContent = 
+                    `Failed tests: ${failedTests}. Please use a modern browser and enable required permissions.`;
+            }
+        }
+
+        // Launch main app
+        function launch() {
+            window.location.href = 'index.html';
+        }
+
+        // Run tests on load
+        window.addEventListener('DOMContentLoaded', async () => {
+            testBrowser();
+            testIndexedDB();
+            testWebAssembly();
+            testCanvas();
+            await testCDN();
+            
+            // Check if we can show launch button (camera test is manual)
+            const basicTestsPassed = testResults.browser && testResults.db && 
+                                    testResults.wasm && testResults.canvas && testResults.cdn;
+            
+            if (!basicTestsPassed) {
+                document.getElementById('errorBox').style.display = 'block';
+                document.getElementById('errorMessage').textContent = 
+                    'Some basic features are not supported. Please use a modern browser.';
+            }
+        });
+    </script>
+</body>
+</html>

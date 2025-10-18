@@ -21,9 +21,10 @@ class WebServer:
         self.port = port
         
         # Initialize Flask app
+        # Use web-app folder for modern UI
         self.app = Flask(__name__, 
-                        template_folder='../templates',
-                        static_folder='../static')
+                        template_folder='../web-app',
+                        static_folder='../web-app')
         self.app.config['SECRET_KEY'] = 'eye_blink_tracker_secret_key'
         
         # Initialize SocketIO for real-time updates
@@ -38,10 +39,21 @@ class WebServer:
     def _setup_routes(self):
         """Setup Flask routes"""
         
+        from flask import send_from_directory
+        
         @self.app.route('/')
         def index():
-            """Main dashboard page"""
-            return render_template('dashboard.html')
+            """Main dashboard page - serve web app"""
+            return render_template('index.html')
+        
+        @self.app.route('/<path:filename>')
+        def serve_static(filename):
+            """Serve static files from web-app directory"""
+            # Only serve .js, .css, .html files
+            if filename.endswith(('.js', '.css', '.html', '.md')):
+                return send_from_directory('../web-app', filename)
+            # For other files, continue to API routes
+            return None
         
         @self.app.route('/api/status')
         def get_status():
@@ -192,8 +204,12 @@ class WebServer:
                 if request.method == 'GET':
                     # Get current settings
                     settings = {
-                        'ear_threshold': float(self.db_manager.get_setting('ear_threshold', '0.3')),
-                        'consecutive_frames': int(self.db_manager.get_setting('consecutive_frames', '3')),
+                        'ear_threshold': float(self.db_manager.get_setting('ear_threshold', '0.25')),
+                        'consecutive_frames': int(self.db_manager.get_setting('consecutive_frames', '1')),
+                        'glasses_mode': self.db_manager.get_setting('glasses_mode', 'false') == 'true',
+                        'show_landmarks': self.db_manager.get_setting('show_landmarks', 'false') == 'true',
+                        'debug_mode': self.db_manager.get_setting('debug_mode', 'false') == 'true',
+                        'adaptive_threshold': self.db_manager.get_setting('adaptive_threshold', 'true') == 'true',
                         'auto_start': self.db_manager.get_setting('auto_start', 'false') == 'true'
                     }
                     return jsonify(settings)
@@ -204,13 +220,32 @@ class WebServer:
                     
                     if 'ear_threshold' in data:
                         threshold = float(data['ear_threshold'])
-                        if self.blink_detector.set_ear_threshold(threshold):
-                            self.db_manager.set_setting('ear_threshold', str(threshold))
+                        self.blink_detector.set_threshold(threshold)
+                        self.db_manager.set_setting('ear_threshold', str(threshold))
                     
                     if 'consecutive_frames' in data:
                         frames = int(data['consecutive_frames'])
-                        if self.blink_detector.set_consecutive_frames(frames):
-                            self.db_manager.set_setting('consecutive_frames', str(frames))
+                        self.blink_detector.set_consecutive_frames(frames)
+                        self.db_manager.set_setting('consecutive_frames', str(frames))
+                    
+                    if 'glasses_mode' in data:
+                        glasses_mode = bool(data['glasses_mode'])
+                        self.blink_detector.set_glasses_mode(glasses_mode)
+                        self.db_manager.set_setting('glasses_mode', str(glasses_mode).lower())
+                    
+                    if 'show_landmarks' in data:
+                        show_landmarks = bool(data['show_landmarks'])
+                        self.db_manager.set_setting('show_landmarks', str(show_landmarks).lower())
+                    
+                    if 'debug_mode' in data:
+                        debug_mode = bool(data['debug_mode'])
+                        self.blink_detector.set_debug_mode(debug_mode)
+                        self.db_manager.set_setting('debug_mode', str(debug_mode).lower())
+                    
+                    if 'adaptive_threshold' in data:
+                        adaptive = bool(data['adaptive_threshold'])
+                        self.blink_detector.set_adaptive_threshold(adaptive)
+                        self.db_manager.set_setting('adaptive_threshold', str(adaptive).lower())
                     
                     if 'auto_start' in data:
                         auto_start = bool(data['auto_start'])
