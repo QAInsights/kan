@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Blink Tracker - Pure Web App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #0dcaf0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .main-container {
+            padding: 2rem 0;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), #0a58ca);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #videoElement {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #canvasElement {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-tracking {
+            background: var(--success-color);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .status-paused {
+            background: var(--warning-color);
+            color: #000;
+        }
+
+        .status-stopped {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .btn-control {
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-control:hover {
+            transform: scale(1.05);
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--primary-color) !important;
+        }
+
+        .blink-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--danger-color);
+            opacity: 0;
+            transition: opacity 0.1s ease;
+        }
+
+        .blink-indicator.active {
+            opacity: 1;
+            animation: blink-flash 0.3s ease;
+        }
+
+        @keyframes blink-flash {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+        }
+
+        .session-item {
+            padding: 1rem;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-3x mb-3"></i>
+            <h3>Initializing MediaPipe...</h3>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="fas fa-eye me-2"></i>Eye Blink Tracker
+            </span>
+            <div class="d-flex align-items-center">
+                <span id="statusBadge" class="status-badge status-stopped me-3">Stopped</span>
+                <button class="btn btn-outline-primary btn-sm" onclick="exportData()">
+                    <i class="fas fa-download me-1"></i>Export Data
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid main-container">
+        <div class="row">
+            <!-- Left Column - Controls & Video -->
+            <div class="col-lg-4">
+                <!-- Control Panel -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-gamepad me-2"></i>Control Panel</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button id="btnStart" class="btn btn-success btn-control" onclick="startTracking()">
+                                <i class="fas fa-play me-2"></i>Start Tracking
+                            </button>
+                            <button id="btnPause" class="btn btn-warning btn-control" onclick="pauseTracking()" disabled>
+                                <i class="fas fa-pause me-2"></i>Pause
+                            </button>
+                            <button id="btnResume" class="btn btn-info btn-control" onclick="resumeTracking()" disabled>
+                                <i class="fas fa-play me-2"></i>Resume
+                            </button>
+                            <button id="btnStop" class="btn btn-danger btn-control" onclick="stopTracking()" disabled>
+                                <i class="fas fa-stop me-2"></i>Stop Tracking
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Session Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Current Session</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 stat-card">
+                                <div class="stat-value text-primary" id="sessionBlinks">0</div>
+                                <div class="stat-label">Blinks</div>
+                            </div>
+                            <div class="col-6 stat-card">
+                                <div class="stat-value text-success" id="blinksPerMinute">0</div>
+                                <div class="stat-label">Per Minute</div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12 stat-card">
+                                <div class="stat-value text-info" id="sessionDuration">00:00:00</div>
+                                <div class="stat-label">Duration</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Feed -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-video me-2"></i>Camera Feed</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="video-container">
+                            <video id="videoElement" autoplay playsinline></video>
+                            <canvas id="canvasElement"></canvas>
+                            <div id="blinkIndicator" class="blink-indicator"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="earThreshold" class="form-label">
+                                EAR Threshold: <span id="earThresholdValue">0.25</span>
+                            </label>
+                            <input type="range" class="form-range" id="earThreshold" 
+                                   min="0.15" max="0.35" step="0.01" value="0.25"
+                                   oninput="updateThreshold(this.value)">
+                            <small class="text-muted">Fallback threshold (adaptive mode uses baseline)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="consecutiveFrames" class="form-label">
+                                Consecutive Frames: <span id="consecutiveFramesValue">1</span>
+                            </label>
+                            <input type="range" class="form-range" id="consecutiveFrames" 
+                                   min="1" max="5" step="1" value="1"
+                                   oninput="updateConsecutiveFrames(this.value)">
+                            <small class="text-muted">Frames to confirm blink (1 = fastest)</small>
+                        </div>
+                        <div class="mb-3">
+                            <div class="alert alert-info py-2 px-3 mb-2" style="font-size: 0.85rem;">
+                                <strong>Current EAR:</strong> <span id="currentEAR">0.000</span>
+                                <br><strong>Baseline:</strong> <span id="baselineEAR">0.000</span>
+                                <br><strong>Active Threshold:</strong> <span id="activeThreshold">0.000</span>
+                                <br><small class="text-muted">Adaptive detection enabled</small>
+                            </div>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="glassesMode" onchange="toggleGlassesMode()">
+                            <label class="form-check-label" for="glassesMode">
+                                <strong>👓 Glasses Mode</strong> (more sensitive)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="showLandmarks" onchange="toggleLandmarks()">
+                            <label class="form-check-label" for="showLandmarks">
+                                Show Eye Landmarks
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="debugMode" onchange="toggleDebugMode()">
+                            <label class="form-check-label" for="debugMode">
+                                Debug Mode (console logs)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Statistics & Charts -->
+            <div class="col-lg-8">
+                <!-- Summary Cards -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-primary" id="totalBlinks">0</div>
+                            <div class="stat-label">Total Blinks</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-success" id="todayBlinks">0</div>
+                            <div class="stat-label">Today</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-info" id="avgPerDay">0</div>
+                            <div class="stat-label">Daily Avg</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-warning" id="avgBPM">0</div>
+                            <div class="stat-label">Avg BPM</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weekly Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Weekly Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Hourly Distribution -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Hourly Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="hourlyChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sessions -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Sessions</h5>
+                            </div>
+                            <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                                <div id="recentSessions">
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>No sessions yet
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MediaPipe Face Mesh -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+    <!-- Application Scripts -->
+    <script src="db.js"></script>
+    <script src="blink-detector.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
