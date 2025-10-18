@@ -9,10 +9,17 @@ import time
 from pathlib import Path
 
 from camera_manager import CameraManager
-from blink_detector_opencv import BlinkDetectorOpenCV
+try:
+    from blink_detector_mediapipe import BlinkDetectorMediaPipe
+    MEDIAPIPE_AVAILABLE = True
+except ImportError:
+    MEDIAPIPE_AVAILABLE = False
+    from blink_detector_opencv import BlinkDetectorOpenCV
 from web_server import WebServer
 from system_tray import SystemTrayApp
 from database import DatabaseManager
+from health_insights import HealthInsightsMonitor
+from health_notifier import HealthNotifier
 
 class EyeBlinkTrackerApp:
     """Main application class that coordinates all components - OpenCV version"""
@@ -20,10 +27,19 @@ class EyeBlinkTrackerApp:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # Initialize components (using OpenCV detector instead of dlib)
+        # Initialize components
         self.db_manager = DatabaseManager()
         self.camera_manager = CameraManager()
-        self.blink_detector = BlinkDetectorOpenCV(self.db_manager)  # OpenCV version!
+        
+        # Use MediaPipe if available, otherwise fall back to OpenCV
+        if MEDIAPIPE_AVAILABLE:
+            self.blink_detector = BlinkDetectorMediaPipe(self.db_manager)
+            self.logger.info("Using MediaPipe detector (same as web app)")
+        else:
+            self.blink_detector = BlinkDetectorOpenCV(self.db_manager)
+            self.logger.warning("MediaPipe not available, using OpenCV detector")
+            self.logger.warning("Install Python 3.11 and MediaPipe for identical web app detection")
+        
         self.web_server = WebServer(self.db_manager, self.camera_manager, self.blink_detector)
         self.system_tray = SystemTrayApp(self)
         
@@ -32,7 +48,14 @@ class EyeBlinkTrackerApp:
         self.is_tracking = False
         self.tracking_thread = None
         
-        self.logger.info("Eye Blink Tracker initialized (OpenCV mode)")
+        # Health monitoring
+        self.health_monitor = HealthInsightsMonitor()
+        self.health_notifier = HealthNotifier()
+        self.last_health_check = 0
+        self.health_check_interval = 30  # Check every 30 seconds
+        
+        mode = "MediaPipe" if MEDIAPIPE_AVAILABLE else "OpenCV"
+        self.logger.info(f"Eye Blink Tracker initialized ({mode} mode)")
     
     def start_tracking(self):
         """Start eye blink tracking"""
@@ -49,7 +72,8 @@ class EyeBlinkTrackerApp:
             self.tracking_thread = threading.Thread(target=self._tracking_loop, daemon=True)
             self.tracking_thread.start()
             
-            self.logger.info("Eye blink tracking started (OpenCV mode)")
+            mode = "MediaPipe" if MEDIAPIPE_AVAILABLE else "OpenCV"
+            self.logger.info(f"Eye blink tracking started ({mode} mode)")
             return True
             
         except Exception as e:
@@ -110,7 +134,8 @@ class EyeBlinkTrackerApp:
                 self.is_tracking = False
                 return
                 
-            self.logger.info("Starting detection with camera (OpenCV mode)")
+            mode = "MediaPipe" if MEDIAPIPE_AVAILABLE else "OpenCV"
+            self.logger.info(f"Starting detection with camera ({mode} mode)")
             self.blink_detector.start_detection(camera)
             
             frame_count = 0
@@ -138,6 +163,12 @@ class EyeBlinkTrackerApp:
                     # Broadcast updates to web dashboard every 30 frames (~1 second)
                     if frame_count % 30 == 0:
                         self.web_server.broadcast_status_update()
+                    
+                    # Health monitoring (check every 30 seconds)
+                    current_time = time.time()
+                    if current_time - self.last_health_check > self.health_check_interval:
+                        self._check_health_insights()
+                        self.last_health_check = current_time
                         
                     # Log progress periodically
                     if frame_count % 100 == 0:
@@ -176,16 +207,21 @@ class EyeBlinkTrackerApp:
         """Run the application"""
         try:
             self.is_running = True
-            self.logger.info("Starting Eye Blink Tracker application (OpenCV mode)")
+            mode = "MediaPipe" if MEDIAPIPE_AVAILABLE else "OpenCV"
+            self.logger.info(f"Starting Eye Blink Tracker application ({mode} mode)")
             
             # Start web server in a separate thread
             web_thread = threading.Thread(target=self.web_server.run, daemon=True)
             web_thread.start()
             
             self.logger.info("Web dashboard starting at http://localhost:5000")
-            print("\n" + "="*60)
-            print("Eye Blink Tracker - OpenCV Mode")
-            print("="*60)
+            print("\n" + "="*70)
+            if MEDIAPIPE_AVAILABLE:
+                print("Eye Blink Tracker - MediaPipe Mode (Identical to Web App)")
+            else:
+                print("Eye Blink Tracker - OpenCV Mode")
+                print("⚠️  For identical web app detection, install Python 3.11 + MediaPipe")
+            print("="*70)
             print("Web Dashboard: http://localhost:5000")
             print("System Tray: Look for the eye icon")
             print("="*60)
@@ -216,3 +252,22 @@ class EyeBlinkTrackerApp:
             self.db_manager.close()
             
         self.logger.info("Application shutdown complete")
+    
+    def _check_health_insights(self):
+        """Check health insights and show alerts"""
+        try:
+            # Get current statistics
+            stats = self.blink_detector.get_stats()
+            bpm = stats.get('blinks_per_minute', 0)
+            duration = stats.get('session_duration', 0)
+            
+            # Analyze blink pattern
+            insight = self.health_monitor.analyze_blink_pattern(bpm, duration)
+            
+            # Show alert if needed
+            if insight and self.health_monitor.should_show_alert(insight.status):
+                self.health_notifier.show_health_alert(insight)
+                self.logger.info(f"Health alert: {insight.title}")
+                
+        except Exception as e:
+            self.logger.error(f"Error checking health insights: {e}")

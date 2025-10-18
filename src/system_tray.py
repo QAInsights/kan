@@ -16,6 +16,7 @@ class SystemTrayApp:
         self.logger = logging.getLogger(__name__)
         self.main_app = main_app
         self.icon = None
+        self.update_timer = None
         
     def create_image(self, width=64, height=64, color1='black', color2='white'):
         """Create the tray icon image"""
@@ -61,9 +62,26 @@ class SystemTrayApp:
     def create_menu(self):
         """Create the context menu for the tray icon"""
         try:
+            # Get current stats for menu
+            def get_stats_text(item):
+                try:
+                    status = self.main_app.get_status()
+                    stats = status.get('tracking_stats', {})
+                    if status['is_tracking']:
+                        blinks = stats.get('session_blinks', 0)
+                        bpm = stats.get('blinks_per_minute', 0)
+                        duration = stats.get('session_duration', 0)
+                        hours = duration // 3600
+                        minutes = (duration % 3600) // 60
+                        seconds = duration % 60
+                        return f"📊 Blinks: {blinks} | BPM: {bpm:.1f} | Time: {hours:02d}:{minutes:02d}:{seconds:02d}"
+                    return "📊 Not tracking"
+                except:
+                    return "📊 Stats unavailable"
+            
             return pystray.Menu(
                 MenuItem('Eye Blink Tracker', self.show_dashboard, default=True),
-                MenuItem('Status', self.show_status),
+                MenuItem(get_stats_text, None, enabled=False),  # Display-only stats
                 pystray.Menu.SEPARATOR,
                 MenuItem('Start Tracking', self.start_tracking, 
                         enabled=lambda item: not self.main_app.is_tracking),
@@ -74,6 +92,7 @@ class SystemTrayApp:
                 MenuItem('Stop Tracking', self.stop_tracking, 
                         enabled=lambda item: self.main_app.is_tracking),
                 pystray.Menu.SEPARATOR,
+                MenuItem('Open Dashboard', self.show_dashboard),
                 MenuItem('Settings', self.show_settings),
                 MenuItem('Statistics', self.show_statistics),
                 pystray.Menu.SEPARATOR,
@@ -201,6 +220,9 @@ class SystemTrayApp:
             
             self.logger.info("Starting system tray application")
             
+            # Start periodic tooltip updates
+            self._start_status_updates()
+            
             # Run the icon (this will block until the application is quit)
             self.icon.run()
             
@@ -232,14 +254,43 @@ class SystemTrayApp:
                 return
                 
             status = self.main_app.get_status()
+            stats = status.get('tracking_stats', {})
             
+            # Build tooltip with stats (single line for Windows compatibility)
             if status['is_tracking']:
+                blinks = stats.get('session_blinks', 0)
+                bpm = stats.get('blinks_per_minute', 0)
+                duration = stats.get('session_duration', 0)
+                
+                # Format duration
+                hours = duration // 3600
+                minutes = (duration % 3600) // 60
+                seconds = duration % 60
+                duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                
                 if self.main_app.blink_detector.is_paused:
-                    self.update_icon_title("Eye Blink Tracker - Paused")
+                    tooltip = f"Eye Blink Tracker [PAUSED] | Blinks: {blinks} | Time: {duration_str}"
                 else:
-                    self.update_icon_title("Eye Blink Tracker - Tracking")
+                    tooltip = f"Eye Blink Tracker [TRACKING] | Blinks: {blinks} | BPM: {bpm:.1f} | Time: {duration_str}"
             else:
-                self.update_icon_title("Eye Blink Tracker")
+                tooltip = "Eye Blink Tracker [STOPPED] - Right-click to start"
+            
+            self.update_icon_title(tooltip)
                 
         except Exception as e:
             self.logger.debug(f"Error updating status: {e}")
+    
+    def _start_status_updates(self):
+        """Start periodic status updates for tooltip"""
+        def update_loop():
+            import time
+            while self.icon and self.icon.visible:
+                try:
+                    self.update_status()
+                    time.sleep(2)  # Update every 2 seconds
+                except Exception as e:
+                    self.logger.debug(f"Error in update loop: {e}")
+                    break
+        
+        self.update_timer = threading.Thread(target=update_loop, daemon=True)
+        self.update_timer.start()
