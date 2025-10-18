@@ -1,6 +1,8 @@
 # 👁️ Kan - Eye Health Monitor
 
-> **Kan** (கண்) means "Eye" in Tamil
+> **Kan** (கண்) means "Eye" in Tamil  
+>
+> After the setup is done; no need to do anything, just `blink * n`
 
 **Protect your vision in the digital age.** Kan is an intelligent eye health monitoring application that tracks your blink rate in real-time, provides health insights, and helps prevent digital eye strain through continuous background monitoring.
 
