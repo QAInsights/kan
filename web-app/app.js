@@ -24,6 +24,10 @@ let hourlyChart;
 let lastHealthCheck = 0;
 let healthCheckInterval = 30000; // Check every 30 seconds
 
+// Tab visibility
+let pauseOnTabSwitch = false;
+let wasAutoPaused = false;
+
 /**
  * Initialize the application
  */
@@ -697,6 +701,12 @@ function showHealthAlert(insights) {
     const recommendations = document.getElementById('healthRecommendations');
     const medicalNote = document.getElementById('healthMedicalNote');
     
+    // Check if all elements exist
+    if (!alert || !icon || !title || !message || !recommendations || !medicalNote) {
+        console.warn('Health alert elements not found in DOM');
+        return;
+    }
+    
     // Set content
     icon.textContent = insights.icon;
     title.textContent = insights.title;
@@ -726,8 +736,14 @@ function showHealthAlert(insights) {
  * Load health tips
  */
 function loadHealthTips() {
-    const tips = healthInsights.getGeneralTips();
     const container = document.getElementById('healthTips');
+    
+    if (!container) {
+        console.warn('Health tips container not found in DOM');
+        return;
+    }
+    
+    const tips = healthInsights.getGeneralTips();
     
     container.innerHTML = tips.tips.map(tip => `
         <div class="col-md-6 mb-3">
@@ -750,8 +766,14 @@ function loadHealthTips() {
  * Load disclaimer content
  */
 function loadDisclaimer() {
-    const disclaimer = healthInsights.getDisclaimer();
     const content = document.getElementById('disclaimerContent');
+    
+    if (!content) {
+        console.warn('Disclaimer content element not found in DOM');
+        return;
+    }
+    
+    const disclaimer = healthInsights.getDisclaimer();
     content.innerHTML = disclaimer.content;
 }
 
@@ -806,6 +828,43 @@ function showHealthInfoModal() {
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', initApp);
+
+// Handle page visibility changes (tab switching)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Tab is now hidden/inactive - camera stops, must pause
+        if (isTracking && !isPaused) {
+            console.log('⏸️ Tab hidden - Camera access stopped by browser. Auto-pausing tracking...');
+            pauseTracking();
+            wasAutoPaused = true;
+            updateStatusBadge('paused');
+            
+            // Show notification if supported
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Eye Blink Tracker Paused', {
+                    body: 'Tracking paused - camera stopped when tab became inactive',
+                    icon: '/favicon.ico'
+                });
+            }
+        }
+    } else {
+        // Tab is now visible/active - camera resumes
+        if (isTracking && wasAutoPaused) {
+            console.log('▶️ Tab visible - Camera access restored. Auto-resuming tracking...');
+            resumeTracking();
+            wasAutoPaused = false;
+            updateStatusBadge('tracking');
+            
+            // Show notification if supported
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Eye Blink Tracker Resumed', {
+                    body: 'Tracking resumed - camera active',
+                    icon: '/favicon.ico'
+                });
+            }
+        }
+    }
+});
 
 // Handle page unload
 window.addEventListener('beforeunload', async (e) => {
