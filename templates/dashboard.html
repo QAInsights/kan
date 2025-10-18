@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Blink Tracker Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-eye me-2"></i>Eye Blink Tracker
+            </span>
+            <div class="navbar-nav flex-row">
+                <span class="nav-item">
+                    <span id="status-indicator" class="badge bg-secondary me-2">Disconnected</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Control Panel -->
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-play-circle me-2"></i>Control Panel</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button id="btn-start" class="btn btn-success" onclick="startTracking()">
+                                <i class="fas fa-play me-2"></i>Start Tracking
+                            </button>
+                            <button id="btn-pause" class="btn btn-warning" onclick="pauseTracking()" disabled>
+                                <i class="fas fa-pause me-2"></i>Pause Tracking
+                            </button>
+                            <button id="btn-resume" class="btn btn-info" onclick="resumeTracking()" disabled>
+                                <i class="fas fa-play me-2"></i>Resume Tracking
+                            </button>
+                            <button id="btn-stop" class="btn btn-danger" onclick="stopTracking()" disabled>
+                                <i class="fas fa-stop me-2"></i>Stop Tracking
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera Selection -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-camera me-2"></i>Camera Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <select id="camera-select" class="form-select" onchange="selectCamera()">
+                                <option value="">Select Camera...</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="refreshCameras()">
+                            <i class="fas fa-refresh me-2"></i>Refresh Cameras
+                        </button>
+                        <div id="camera-info" class="mt-3"></div>
+                    </div>
+                </div>
+
+                <!-- Current Session Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Current Session</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="stat-value" id="session-blinks">0</div>
+                                <div class="stat-label">Blinks</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-value" id="blinks-per-minute">0</div>
+                                <div class="stat-label">Per Minute</div>
+                            </div>
+                        </div>
+                        <div class="row text-center mt-3">
+                            <div class="col-12">
+                                <div class="stat-value" id="session-duration">00:00:00</div>
+                                <div class="stat-label">Duration</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Dashboard -->
+            <div class="col-md-8">
+                <!-- Summary Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <div class="stat-value text-primary" id="total-blinks">0</div>
+                                <div class="stat-label">Total Blinks</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <div class="stat-value text-success" id="today-blinks">0</div>
+                                <div class="stat-label">Today's Blinks</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <div class="stat-value text-info" id="avg-per-day">0</div>
+                                <div class="stat-label">Daily Average</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <div class="stat-value text-warning" id="avg-bpm">0</div>
+                                <div class="stat-label">Avg BPM</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Weekly Blink Statistics</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="weekly-chart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Hourly Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="hourly-chart" width="400" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Sessions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recent-sessions">
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="settings-form">
+                        <div class="mb-3">
+                            <label for="ear-threshold" class="form-label">EAR Threshold</label>
+                            <input type="range" class="form-range" id="ear-threshold" min="0.1" max="0.5" step="0.01" value="0.3">
+                            <div class="form-text">Eye Aspect Ratio threshold for blink detection (0.1 - 0.5)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="consecutive-frames" class="form-label">Consecutive Frames</label>
+                            <input type="range" class="form-range" id="consecutive-frames" min="1" max="10" step="1" value="3">
+                            <div class="form-text">Number of consecutive frames to confirm a blink (1 - 10)</div>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="auto-start">
+                            <label class="form-check-label" for="auto-start">
+                                Auto-start tracking on application launch
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+/* Eye Blink Tracker Dashboard Styles */
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.5rem;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+#status-indicator {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.status-connected {
+    background-color: #198754 !important;
+}
+
+.status-tracking {
+    background-color: #0d6efd !important;
+    animation: pulse 2s infinite;
+}
+
+.status-paused {
+    background-color: #ffc107 !important;
+}
+
+.status-disconnected {
+    background-color: #6c757d !important;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.btn {
+    border-radius: 0.375rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.form-range {
+    margin-bottom: 0.5rem;
+}
+
+#camera-info {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.camera-info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.camera-info-item:last-child {
+    border-bottom: none;
+}
+
+.session-item {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    background-color: #fff;
+}
+
+.session-date {
+    font-weight: 600;
+    color: #495057;
+}
+
+.session-stats {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-top: 1rem;
+}
+
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    color: #6c757d;
+}
+
+.alert-camera {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+.alert-camera .alert-link {
+    color: #533f03;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .col-md-3 .card {
+        margin-bottom: 1rem;
+    }
+    
+    .d-grid .btn {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Custom scrollbar for sessions */
+#recent-sessions {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#recent-sessions::-webkit-scrollbar {
+    width: 6px;
+}
+
+#recent-sessions::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#recent-sessions::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#recent-sessions::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Animation for new blinks */
+.blink-animation {
+    animation: blinkDetected 0.5s ease-in-out;
+}
+
+@keyframes blinkDetected {
+    0% {
+        transform: scale(1);
+        background-color: transparent;
+    }
+    50% {
+        transform: scale(1.05);
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+    100% {
+        transform: scale(1);
+        background-color: transparent;
+    }
+}
+
+/* Modal customizations */
+.modal-content {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+}
+
+/* Range input styling */
+.form-range::-webkit-slider-thumb {
+    background-color: #0d6efd;
+}
+
+.form-range::-moz-range-thumb {
+    background-color: #0d6efd;
+    border: none;
+}
+
+/* Button hover effects */
+.btn:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease-in-out;
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Card hover effects */
+.card:hover {
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+/* Status indicators */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-dot.active {
+    background-color: #198754;
+}
+
+.status-dot.inactive {
+    background-color: #dc3545;
+}
+
+.status-dot.paused {
+    background-color: #ffc107;
+}
+
+/* Chart styling */
+canvas {
+    max-height: 300px;
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 300px;
+}
+
+.toast {
+    border: none;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
+}

@@ -1,0 +1,23 @@
+.venv
+.venv*
+venv
+
+# Data and logs
+data
+logs
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+CLEANUP_SUMMARY.md
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Large model files
+shape_predictor_68_face_landmarks.dat
