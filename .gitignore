@@ -1,7 +1,7 @@
 .venv
 .venv*
 venv
-
+venv-py311
 # Data and logs
 data
 logs
@@ -12,7 +12,9 @@ __pycache__/
 *$py.class
 *.so
 
-CLEANUP_SUMMARY.md
+# Ignore all markdown files except README.md
+*.md
+!README.md
 
 # Database files
 *.db
@@ -21,3 +23,6 @@ CLEANUP_SUMMARY.md
 
 # Large model files
 shape_predictor_68_face_landmarks.dat
+
+*.bat
+*.ps1
