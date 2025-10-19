@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Control Test</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 1rem;
+            padding: 3rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+        }
+        
+        .voice-btn {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: none;
+            font-size: 3rem;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .voice-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .voice-btn.listening {
+            animation: pulse 1.5s infinite;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .command-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        
+        .command-item {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: white;
+            border-radius: 0.375rem;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container text-center">
+        <h1 class="mb-4"><i class="fas fa-microphone me-2"></i>Voice Control Test</h1>
+        
+        <p class="text-muted mb-4">Test voice commands for the Eye Blink Tracker</p>
+        
+        <div class="mb-4">
+            <button id="voice-btn" class="voice-btn" onclick="toggleVoice()">
+                <i class="fas fa-microphone-slash"></i>
+            </button>
+        </div>
+        
+        <div id="status" class="alert alert-secondary mb-4">
+            Click the microphone to start
+        </div>
+        
+        <div class="mb-4">
+            <h5>Available Commands:</h5>
+            <div class="row text-start">
+                <div class="col-6">
+                    <ul class="list-unstyled">
+                        <li><strong>"Start"</strong> - Begin tracking</li>
+                        <li><strong>"Stop"</strong> - End tracking</li>
+                        <li><strong>"Stats"</strong> - Hear statistics</li>
+                    </ul>
+                </div>
+                <div class="col-6">
+                    <ul class="list-unstyled">
+                        <li><strong>"Pause"</strong> - Pause tracking</li>
+                        <li><strong>"Resume"</strong> - Continue tracking</li>
+                        <li><strong>"Help"</strong> - Show help</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="command-log" id="command-log">
+            <div class="text-muted">Command log will appear here...</div>
+        </div>
+        
+        <div class="mt-4">
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let recognition = null;
+        let isListening = false;
+        
+        function toggleVoice() {
+            if (!recognition) {
+                initRecognition();
+            }
+            
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+        
+        function initRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                alert('Speech Recognition not supported in this browser. Try Chrome or Edge.');
+                return;
+            }
+            
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = (event) => {
+                const last = event.results.length - 1;
+                const command = event.results[last][0].transcript;
+                const confidence = event.results[last][0].confidence;
+                
+                logCommand(command, confidence);
+                speak(`You said: ${command}`);
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Error:', event.error);
+                updateStatus(`Error: ${event.error}`, 'danger');
+            };
+            
+            recognition.onend = () => {
+                if (isListening) {
+                    setTimeout(() => {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Restart delayed');
+                        }
+                    }, 100);
+                }
+            };
+        }
+        
+        function startListening() {
+            try {
+                recognition.start();
+                isListening = true;
+                
+                const btn = document.getElementById('voice-btn');
+                btn.classList.add('listening');
+                btn.innerHTML = '<i class="fas fa-microphone"></i>';
+                
+                updateStatus('Listening... Speak a command!', 'success');
+                speak('Voice control activated. Try saying start, stop, or stats.');
+                
+            } catch (e) {
+                console.error('Error starting:', e);
+                updateStatus('Failed to start voice control', 'danger');
+            }
+        }
+        
+        function stopListening() {
+            if (recognition) {
+                recognition.stop();
+            }
+            
+            isListening = false;
+            
+            const btn = document.getElementById('voice-btn');
+            btn.classList.remove('listening');
+            btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            
+            updateStatus('Voice control stopped', 'secondary');
+            speak('Voice control deactivated');
+        }
+        
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            utterance.lang = 'en-US';
+            
+            speechSynthesis.cancel();
+            speechSynthesis.speak(utterance);
+        }
+        
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `alert alert-${type} mb-4`;
+            status.textContent = message;
+        }
+        
+        function logCommand(command, confidence) {
+            const log = document.getElementById('command-log');
+            const time = new Date().toLocaleTimeString();
+            
+            const item = document.createElement('div');
+            item.className = 'command-item';
+            item.innerHTML = `
+                <strong>${time}</strong> - "${command}"
+                <br>
+                <small class="text-muted">Confidence: ${(confidence * 100).toFixed(0)}%</small>
+            `;
+            
+            // Remove placeholder if exists
+            if (log.querySelector('.text-muted')) {
+                log.innerHTML = '';
+            }
+            
+            log.insertBefore(item, log.firstChild);
+            
+            // Keep only last 10 commands
+            while (log.children.length > 10) {
+                log.removeChild(log.lastChild);
+            }
+        }
+    </script>
+</body>
+</html>
